@@ -1,4 +1,3 @@
-# Importo las librerías y recursos necesarios.
 import fastapi
 import pandas as pd
 import numpy as np
@@ -8,7 +7,7 @@ from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import nltk
 nltk.download('vader_lexicon')
 
-# Defino la función de análisis de sentimientos.
+
 def sentiment_analysis(review):
     # Instancia el analizador de sentimientos
     sid = SentimentIntensityAnalyzer()
@@ -19,23 +18,8 @@ def sentiment_analysis(review):
     # Devuelve el puntaje de sentimiento compuesto
     return sentiment_scores['compound']
 
-# Leo los datos.
-df_steam_games = pd.read_csv('steam_games.csv')
-df_user_reviews_desanidado = pd.read_csv('user_reviews.csv')
-df_users_items_desanidado = pd.read_csv('users_items.csv')
 
-# Creo una nueva columna que combina 'app_name' con tus columnas de géneros.
-df_steam_games['combined'] = df_steam_games['app_name'] + ' ' + df_steam_games['Action'].astype(str) + ' ' + df_steam_games['Adventure'].astype(str) + ' ' + df_steam_games['Animation & Modeling'].astype(str) + ' ' + df_steam_games['Audio Production'].astype(str) + ' ' + df_steam_games['Casual'].astype(str) + ' ' + df_steam_games['Design & Illustration'].astype(str) + ' ' + df_steam_games['Early Access'].astype(str) + ' ' + df_steam_games['Education'].astype(str) + ' ' + df_steam_games['Free to Play'].astype(str) + ' ' + df_steam_games['Indie'].astype(str) + ' ' + df_steam_games['Massively Multiplayer'].astype(str)
-
-# Creo la matriz de características utilizando la columna 'combined'.
-count = CountVectorizer(stop_words='english', ngram_range=(1, 2))
-count_matrix = count.fit_transform(df_steam_games['combined'])
-
-# Calculo la similitud del coseno.
-cosine_sim = cosine_similarity(count_matrix, count_matrix)
-
-# Defino la función.
-def recomendacion_juego(item_id: int):
+def recomendacion_juego(item_id: int, generos_favoritos: List[str] = None):
     # Encuentro el juego con el item_id dado.
     game_index = df_steam_games[df_steam_games['item_id'] == item_id].index[0]
 
@@ -43,13 +27,25 @@ def recomendacion_juego(item_id: int):
     similar_games = []
     for i in range(len(df_steam_games)):
         if i != game_index:
-            similar_games.append((i, cosine_sim[i]))
+            if generos_favoritos:
+                if set(df_steam_games.iloc[i]['genero']).intersection(generos_favoritos):
+                    similar_games.append((i, cosine_sim[i]))
+            else:
+                similar_games.append((i, cosine_sim[i]))
 
     # Ordeno la lista de juegos similares por similitud.
     similar_games.sort(key=lambda x: x[1], reverse=True)
 
     # Devuelve los juegos recomendados
-    recommended_games = [df_steam_games.iloc[i[0]]['app_name'] for i in similar_games[:100]]
+    recommended_games = [
+        {
+            'app_name': game['app_name'],
+            'genero': game['genero'],
+            'plataforma': game['plataforma'],
+            'puntuacion': game['puntuacion'],
+        }
+        for i, game in similar_games[:100]
+    ]
 
     # Encuentro las reseñas de los usuarios para el juego dado.
     reviews = df_user_reviews_desanidado[df_user_reviews_desanidado['item_id'] == item_id]
@@ -66,19 +62,33 @@ def recomendacion_juego(item_id: int):
     return {
         'Juegos recomendados': recommended_games,
         'Reseñas': top_reviews,
-        'Sentimiento de las reseñas': review_sentiment
+        'Sentimiento de las reseñas': review_sentiment,
     }
 
-# Creo la aplicación.
-app = FastAPI()
 
-# Defino los endpoints.
+def autenticar_usuario(username: str, password: str):
+    # ...
+
+    return True
+
+
+app = fastapi.FastAPI()
+
+
 @app.get("/recomendacion_juego/{item_id}")
-def recomendacion_juego(item_id: int):
+def get_recomendacion_juego(item_id: int, username: str = None, password: str = None):
+    # ...
+
+    if username and password:
+        if not autenticar_usuario(username, password):
+            return {'error': 'Acceso denegado'}
+
     recommended_games = recomendacion_juego(item_id)
 
-    # Renderizo los resultados en formato JSON.
-    return jsonify(recommended_games)
+    # ...
 
-# Inicia la aplicación.
-app.run()
+    return recommended_games
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
