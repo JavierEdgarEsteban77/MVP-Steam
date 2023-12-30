@@ -1,94 +1,126 @@
 import fastapi
 import pandas as pd
 import numpy as np
+import uvicorn
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.feature_extraction.text import CountVectorizer
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import nltk
 nltk.download('vader_lexicon')
 
-
+# Función para realizar análisis de sentimientos
 def sentiment_analysis(review):
-    # Instancia el analizador de sentimientos
+    """Realiza un análisis de sentimientos en una reseña.
+
+    Args:
+        review (str): La reseña a analizar.
+
+    Returns:
+        float: El puntaje de sentimiento de la reseña.
+    """
     sid = SentimentIntensityAnalyzer()
-
-    # Calcula los puntajes de sentimiento para la reseña
     sentiment_scores = sid.polarity_scores(review)
-
-    # Devuelve el puntaje de sentimiento compuesto
     return sentiment_scores['compound']
 
+# Función para obtener el año de lanzamiento con más horas jugadas para un género específico
+def PlayTimeGenre(genero: str):
+    """Obtiene el año de lanzamiento con más horas jugadas para un género específico.
 
-def recomendacion_juego(item_id: int, generos_favoritos: List[str] = None):
-    # Encuentro el juego con el item_id dado.
-    game_index = df_steam_games[df_steam_games['item_id'] == item_id].index[0]
+    Args:
+        genero (str): El género de los juegos.
 
-    # Encuentro los 100 juegos más similares.
-    similar_games = []
-    for i in range(len(df_steam_games)):
-        if i != game_index:
-            if generos_favoritos:
-                if set(df_steam_games.iloc[i]['genero']).intersection(generos_favoritos):
-                    similar_games.append((i, cosine_sim[i]))
-            else:
-                similar_games.append((i, cosine_sim[i]))
+    Returns:
+        dict: Un diccionario con el año de lanzamiento con más horas jugadas para el género dado.
+    """
+    df_genre = df_users_items_desanidado[df_users_items_desanidado['genero'] == genero]
+    year_most_played = df_genre.groupby('año')['playtime_forever'].sum().idxmax()
+    return {"Año de lanzamiento con más horas jugadas para Género X" : year_most_played}
 
-    # Ordeno la lista de juegos similares por similitud.
-    similar_games.sort(key=lambda x: x[1], reverse=True)
+# Función para obtener el usuario con más horas jugadas para un género específico
+def UserForGenre(genero: str):
+    """Obtiene el usuario con más horas jugadas para un género específico.
 
-    # Devuelve los juegos recomendados
-    recommended_games = [
-        {
-            'app_name': game['app_name'],
-            'genero': game['genero'],
-            'plataforma': game['plataforma'],
-            'puntuacion': game['puntuacion'],
-        }
-        for i, game in similar_games[:100]
-    ]
+    Args:
+        genero (str): El género de los juegos.
 
-    # Encuentro las reseñas de los usuarios para el juego dado.
-    reviews = df_user_reviews_desanidado[df_user_reviews_desanidado['item_id'] == item_id]
+    Returns:
+        dict: Un diccionario con el usuario que tiene más horas jugadas para el género dado y las horas jugadas por año.
+    """
+    df_genre = df_users_items_desanidado[df_users_items_desanidado['genero'] == genero]
+    user_most_played = df_genre.groupby('user_id')['playtime_forever'].sum().idxmax()
+    hours_played_per_year = df_genre[df_genre['user_id'] == user_most_played].groupby('año')['playtime_forever'].sum().to_dict()
+    return {"Usuario con más horas jugadas para Género X" : user_most_played, "Horas jugadas": hours_played_per_year}
 
-    # Encuentro las reseñas más votadas.
-    top_reviews = reviews.sort_values(by='helpful', ascending=False).head(3)
+# Función para obtener los juegos más recomendados en un año específico
+def UsersRecommend(año: int):
+    """Obtiene los juegos más recomendados en un año específico.
 
-    # Analizo el sentimiento de las reseñas.
-    review_sentiment = []
-    for review in top_reviews['reviews']:
-        review_sentiment.append(sentiment_analysis(review))
+    Args:
+        año (int): El año de las recomendaciones.
 
-    # Devuelve los juegos recomendados y la información de las reseñas.
-    return {
-        'Juegos recomendados': recommended_games,
-        'Reseñas': top_reviews,
-        'Sentimiento de las reseñas': review_sentiment,
-    }
+    Returns:
+        list: Una lista con los tres juegos más recomendados en el año dado.
+    """
+    df_year = df_user_reviews_desanidado[df_user_reviews_desanidado['año'] == año]
+    df_recommended = df_year[df_year['recommend'] == True]
+    top_games = df_recommended['item_name'].value_counts().nlargest(3).index.tolist()
+    return [{"Puesto 1" : top_games[0]}, {"Puesto 2" : top_games[1]},{"Puesto 3" : top_games[2]}]
 
+# Función para obtener los juegos menos recomendados en un año específico
+def UsersNotRecommend(año: int):
+    """Obtiene los juegos menos recomendados en un año específico.
 
-def autenticar_usuario(username: str, password: str):
-    # ...
+    Args:
+        año (int): El año de las recomendaciones.
 
-    return True
+    Returns:
+        list: Una lista con los tres juegos menos recomendados en el año dado.
+    """
+    df_year = df_user_reviews_desanidado[df_user_reviews_desanidado['año'] == año]
+    df_not_recommended = df_year[df_year['recommend'] == False]
+    top_games = df_not_recommended['item_name'].value_counts().nlargest(3).index.tolist()
+    return [{"Puesto 1" : top_games[0]}, {"Puesto 2" : top_games[1]},{"Puesto 3" : top_games[2]}]
 
+# Función para obtener el análisis de sentimientos de las reseñas en un año específico
+def sentiment_analysis_year(año: int):
+    """Obtiene el análisis de sentimientos de las reseñas en un año específico.
 
-app = fastapi.FastAPI()
+    Args:
+        año (int): El año de las reseñas.
 
+    Returns:
+        dict: Un diccionario con la cantidad de reseñas negativas, neutrales y positivas en el año dado.
+    """
+    df_year = df_user_reviews_desanidado[df_user_reviews_desanidado['año'] == año]
+    sentiments = df_year['sentiment_analysis'].value_counts().to_dict()
+    return sentiments
 
-@app.get("/recomendacion_juego/{item_id}")
-def get_recomendacion_juego(item_id: int, username: str = None, password: str = None):
-    # ...
+app = fastapi.FastAPI(title="MVP Steam PI ML OPs",
+              description="Descripción: Obtener el Producto Mínimo Viable",
+              contact={"name": "Javier Edgar Esteban",
+                       "url": "https://github.com/JavierEdgarEsteban77/MVP-Steam",
+                       "email": "javieredgaresteban@gmail.com",
+                       "Tel.: +54 9 261 254 3003383"})
 
-    if username and password:
-        if not autenticar_usuario(username, password):
-            return {'error': 'Acceso denegado'}
+@app.get("/PlayTimeGenre/{genero}")
+def get_PlayTimeGenre(genero: str):
+    return PlayTimeGenre(genero)
 
-    recommended_games = recomendacion_juego(item_id)
+@app.get("/UserForGenre/{genero}")
+def get_UserForGenre(genero: str):
+    return UserForGenre(genero)
 
-    # ...
+@app.get("/UsersRecommend/{año}")
+def get_UsersRecommend(año: int):
+    return UsersRecommend(año)
 
-    return recommended_games
+@app.get("/UsersNotRecommend/{año}")
+def get_UsersNotRecommend(año: int):
+    return UsersNotRecommend(año)
 
+@app.get("/sentiment_analysis_year/{año}")
+def get_sentiment_analysis_year(año: int):
+    return sentiment_analysis_year(año)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    uvicorn.run("mean:app", host="0.0.0.0", port=8000, reload=True)
