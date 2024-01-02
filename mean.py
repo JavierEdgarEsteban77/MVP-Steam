@@ -32,7 +32,7 @@ def PlayTimeGenre(genero: str):
     Returns:
         dict: Un diccionario con el año de lanzamiento con más horas jugadas para el género dado.
     """
-    df_genre = df_users_items_desanidado[df_users_items_desanidado['genero'] == genero]
+    df_genre = df_users_items[df_users['genero'] == genero]
     year_most_played = df_genre.groupby('año')['playtime_forever'].sum().idxmax()
     return {"Año de lanzamiento con más horas jugadas para Género X" : year_most_played}
 
@@ -46,7 +46,7 @@ def UserForGenre(genero: str):
     Returns:
         dict: Un diccionario con el usuario que tiene más horas jugadas para el género dado y las horas jugadas por año.
     """
-    df_genre = df_users_items_desanidado[df_users_items_desanidado['genero'] == genero]
+    df_genre = df_users_items[df_users_items['genero'] == genero]
     user_most_played = df_genre.groupby('user_id')['playtime_forever'].sum().idxmax()
     hours_played_per_year = df_genre[df_genre['user_id'] == user_most_played].groupby('año')['playtime_forever'].sum().to_dict()
     return {"Usuario con más horas jugadas para Género X" : user_most_played, "Horas jugadas": hours_played_per_year}
@@ -61,7 +61,7 @@ def UsersRecommend(año: int):
     Returns:
         list: Una lista con los tres juegos más recomendados en el año dado.
     """
-    df_year = df_user_reviews_desanidado[df_user_reviews_desanidado['año'] == año]
+    df_year = df_user_reviews[df_user_reviews['año'] == año]
     df_recommended = df_year[df_year['recommend'] == True]
     top_games = df_recommended['item_name'].value_counts().nlargest(3).index.tolist()
     return [{"Puesto 1" : top_games[0]}, {"Puesto 2" : top_games[1]},{"Puesto 3" : top_games[2]}]
@@ -76,7 +76,7 @@ def UsersNotRecommend(año: int):
     Returns:
         list: Una lista con los tres juegos menos recomendados en el año dado.
     """
-    df_year = df_user_reviews_desanidado[df_user_reviews_desanidado['año'] == año]
+    df_year = df_user_reviews[df_user_reviews['año'] == año]
     df_not_recommended = df_year[df_year['recommend'] == False]
     top_games = df_not_recommended['item_name'].value_counts().nlargest(3).index.tolist()
     return [{"Puesto 1" : top_games[0]}, {"Puesto 2" : top_games[1]},{"Puesto 3" : top_games[2]}]
@@ -91,7 +91,7 @@ def sentiment_analysis_year(año: int):
     Returns:
         dict: Un diccionario con la cantidad de reseñas negativas, neutrales y positivas en el año dado.
     """
-    df_year = df_user_reviews_desanidado[df_user_reviews_desanidado['año'] == año]
+    df_year = df_user_reviews[df_user_reviews['año'] == año]
     sentiments = df_year['sentiment_analysis'].value_counts().to_dict()
     return sentiments
 
