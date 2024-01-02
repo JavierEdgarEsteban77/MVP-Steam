@@ -32,7 +32,7 @@ def PlayTimeGenre(genero: str):
     Returns:
         dict: Un diccionario con el año de lanzamiento con más horas jugadas para el género dado.
     """
-    df_genre = df_users_items[df_users['genero'] == genero]
+    df_genre = df_users_items[df_users_items['genero'] == genero]
     year_most_played = df_genre.groupby('año')['playtime_forever'].sum().idxmax()
     return {"Año de lanzamiento con más horas jugadas para Género X" : year_most_played}
 
@@ -100,7 +100,7 @@ app = fastapi.FastAPI(title="MVP Steam PI ML OPs",
               contact={"name": "Javier Edgar Esteban",
                        "url": "https://github.com/JavierEdgarEsteban77/MVP-Steam",
                        "email": "javieredgaresteban@gmail.com",
-                       "Tel.: +54 9 261 254 3003383"})
+                       "Tel.": "+5492612543003383"})
 
 @app.get("/PlayTimeGenre/{genero}")
 def get_PlayTimeGenre(genero: str):
