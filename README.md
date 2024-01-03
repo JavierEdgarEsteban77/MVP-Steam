@@ -57,11 +57,11 @@ Este tipo de sistema toma un usuario, encuentra usuarios similares y recomienda 
 
 **Ejecución de la API**
 
-Para ejecutar la API, se debe correr el archivo api_steam.py.
+Enlace de fastAPI es: http://127.0.0.1:8000/docs
 
 **Video Explicativo**
 
-Enlace al video explicativo: (El enlace se agregará cuando el video esté listo)
+Enlace al video explicativo: https://1drv.ms/v/s!AhToA3u1i9cWgbgpwMm7gd5cg7m1hQ?e=8qUUyg
 
 **Notas**
 
